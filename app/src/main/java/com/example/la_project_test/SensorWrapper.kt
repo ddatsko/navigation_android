@@ -46,4 +46,6 @@ class SensorWrapper(
     fun size() = values.size
 
     fun getAvgValue() = values.reduce(Vector::plus) * (1.0 / values.size)
+
+    fun getFirst() = values[0]
 }

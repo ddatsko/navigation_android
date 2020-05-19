@@ -1,5 +1,7 @@
 package com.example.la_project_test
 
+import java.lang.StringBuilder
+
 
 class Vector {
     private var values = DoubleArray(3)
@@ -89,7 +91,8 @@ class Vector {
     }
 
     override fun toString(): String {
-        return "(${values[0]}, ${values[1]}, ${values[2]})"
+        var rounded = values.map { String.format("%.3f", it) }
+        return "(${rounded[0]}, ${rounded[1]}, ${rounded[2]})"
     }
 
 }

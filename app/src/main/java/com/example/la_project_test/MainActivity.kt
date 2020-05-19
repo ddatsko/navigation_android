@@ -31,7 +31,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener, View.OnClickListe
     private lateinit var p: Matrix // From global to smartphone
     private lateinit var pInv: Matrix // From smartphone to global
 
-    private val fixesBetweenChange = 1
+    private val fixesBetweenChange = 10
     private var counter = -1
     private var checked = false // to make button be pressed only one time (problems with listeners)
 
@@ -44,6 +44,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener, View.OnClickListe
     private lateinit var linearAcceleration: Sensor
     private lateinit var magnetometer: Sensor
     private lateinit var gyroscope: Sensor
+
+
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -103,7 +105,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener, View.OnClickListe
 
 
         p = Matrix(x, y, z)
-        tmpText.text = p.toString()
         pInv = p.inverse()
     }
 
@@ -128,12 +129,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener, View.OnClickListe
                         linearAccelerationWrapper.getAvgValue(),
                         linearAccelerationWrapper.timeElapsed()
                     )
+
                     linearAccelerationWrapper.clearValues()
                 }
             }
             Sensor.TYPE_GYROSCOPE -> {
                 gyroscopeWrapper.registerValue(Vector(event.values))
-                if (gyroscopeWrapper.size() == fixesBetweenChange && counter != -1) {
+                if (gyroscopeWrapper.size() == 10 && counter != -1) {
                     print("Hello")
                     updateRotation(gyroscopeWrapper.getAvgValue(), gyroscopeWrapper.timeElapsed())
                     gyroscopeWrapper.clearValues()
