@@ -91,7 +91,7 @@ class Vector {
     }
 
     override fun toString(): String {
-        var rounded = values.map { String.format("%.3f", it) }
+        var rounded = values.map { String.format("%.6f", it) }
         return "(${rounded[0]}, ${rounded[1]}, ${rounded[2]})"
     }
 

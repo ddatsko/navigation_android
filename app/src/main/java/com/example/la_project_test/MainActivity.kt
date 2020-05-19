@@ -8,6 +8,10 @@ import android.hardware.SensorManager
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import com.github.mikephil.charting.data.Entry
+import com.github.mikephil.charting.data.LineData
+import com.github.mikephil.charting.data.LineDataSet
+import com.github.mikephil.charting.interfaces.datasets.ILineDataSet
 import kotlinx.android.synthetic.main.activity_main.*
 import java.lang.Math.cos
 import java.lang.Math.sin
@@ -44,6 +48,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener, View.OnClickListe
     private lateinit var linearAcceleration: Sensor
     private lateinit var magnetometer: Sensor
     private lateinit var gyroscope: Sensor
+
+    private var chartCounter = -1
+    private var valuesX = ArrayList<Entry>()
+    private var valuesY = ArrayList<Entry>()
+    private var valuesZ = ArrayList<Entry>()
+
+    private var startTime = 0F
+
+    private lateinit var errorVector: Vector
 
 
 
@@ -111,6 +124,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener, View.OnClickListe
 
     override fun onSensorChanged(event: SensorEvent?) {
         if (event == null) return
+
         when (event.sensor.type) {
             Sensor.TYPE_ACCELEROMETER -> {
                 if (accelerometerWrapper.size() < fixesBetweenChange) {
@@ -123,7 +137,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener, View.OnClickListe
                 }
             }
             Sensor.TYPE_LINEAR_ACCELERATION -> {
-                linearAccelerationWrapper.registerValue(Vector(event.values))
+                if (counter == -1 && linearAccelerationWrapper.size() < 100) {
+                    linearAccelerationWrapper.registerValue(Vector(event.values))
+                } else if (counter != -1)
+                    linearAccelerationWrapper.registerValue(Vector(event.values))
                 if (linearAccelerationWrapper.size() == fixesBetweenChange && counter != -1) {
                     updateMovement(
                         linearAccelerationWrapper.getAvgValue(),
@@ -144,21 +161,26 @@ class MainActivity : AppCompatActivity(), SensorEventListener, View.OnClickListe
 
 
         }
-        if (counter == -1 && accelerometerWrapper.size() == fixesBetweenChange && magnetometerWrapper.size() == fixesBetweenChange) {
+        if (counter == -1 && linearAccelerationWrapper.size() == 100 && accelerometerWrapper.size() == fixesBetweenChange && magnetometerWrapper.size() == fixesBetweenChange) {
             val accelerometerValue = accelerometerWrapper.getAvgValue()
             val magnetometerValue = magnetometerWrapper.getAvgValue()
 
             calculateInitial(accelerometerValue, magnetometerValue)
             updateViewValues()
+            errorVector = linearAccelerationWrapper.getAvgValue()
             linearAccelerationWrapper.clearValues()
             gyroscopeWrapper.clearValues()
             counter = 0
+            chartCounter = 0
+            startTime = System.nanoTime().toFloat()
         }
 
         if (counter >= 0)  {
             updateViewValues()
             counter = 0
         }
+
+
 
     }
 
@@ -167,14 +189,17 @@ class MainActivity : AppCompatActivity(), SensorEventListener, View.OnClickListe
         builder.append(pInv * Vector(0.0, 1.0, 0.0))
         rotationVectorData2.text = builder.toString()
         tmpText.text = distanceMoved.toString()
+
+
     }
 
 
     private fun updateMovement(accelerometerVector: Vector, time: Long) {
-        curSpeed += accelerometerVector * (time / 1000000000.0)
-        var moved = curSpeed * (time / 1000000000.0)
-        distanceMoved += pInv * moved
-
+        var newVector = accelerometerVector - errorVector
+        curSpeed += pInv * (newVector * (time / 1000000000.0))
+        val moved = curSpeed * (time / 1000000000.0)
+        distanceMoved += moved
+        showCharts()
     }
 
     private fun updateRotation(gyroscopeVector: Vector, time: Long) {
@@ -209,54 +234,47 @@ class MainActivity : AppCompatActivity(), SensorEventListener, View.OnClickListe
     }
 
 
-//
-//    private fun updateChartValues() {
-//        counter++
-//        if (counter < 0) return
-//        if (counter > 1000) {
-//            showCharts(xValues[xValues.size - 1].x)
-//            counter = -1000000
-//        }
-//        textView7.text = counter.toString()
-//
-//        xValues.add(Entry((System.nanoTime() - startTime).toFloat(), accelerometerValues[0]))
-//        yValues.add(Entry((System.nanoTime() - startTime).toFloat(), accelerometerValues[1]))
-//        zValues.add(Entry((System.nanoTime() - startTime).toFloat(), accelerometerValues[2]))
-//
-//
-//    }
 
-//    private fun showCharts(xMax: Float) {
-//        val vl = LineDataSet(xValues, "X")
-//        vl.setDrawValues(false)
-//        vl.lineWidth = 2f
-//        vl.setCircleColor(getColor(R.color.blue))
-//        vl.color = getColor(R.color.blue)
-//
-//        val vl2 = LineDataSet(yValues, "Y")
-//        vl2.setDrawValues(false)
-//        vl2.lineWidth = 2f
-//        vl2.setCircleColor(getColor(R.color.green))
-//        vl2.color = getColor(R.color.green)
-//
-//        val vl3 = LineDataSet(zValues, "Z")
-//        vl3.setDrawValues(false)
-//        vl3.lineWidth = 2f
-//        vl3.setCircleColor(getColor(R.color.red))
-//        vl3.color = getColor(R.color.red)
-//
-//
-//
-//        lineChart.xAxis.labelRotationAngle = 0f
-//        var dataSets = ArrayList<ILineDataSet>()
-//        dataSets.add(vl)
-//        dataSets.add(vl2)
-//        dataSets.add(vl3)
-//        lineChart.data = LineData(dataSets)
-//        lineChart.axisRight.isEnabled = false
-//        lineChart.xAxis.axisMinimum = 0F
-//        lineChart.xAxis.axisMaximum = xMax + 1F
-//
-//    }
+
+    private fun showCharts() {
+        if (valuesX.size > 100) return
+        valuesX.add(Entry(System.nanoTime().toFloat() - startTime, distanceMoved[0].toFloat()))
+        valuesY.add(Entry(System.nanoTime().toFloat() - startTime, distanceMoved[1].toFloat()))
+        valuesZ.add(Entry(System.nanoTime().toFloat() - startTime, distanceMoved[2].toFloat()))
+
+        if (valuesX.size <= 100) return
+
+
+
+        val vl = LineDataSet(valuesX, "X")
+        vl.setDrawValues(false)
+        vl.lineWidth = 2f
+        vl.setCircleColor(getColor(R.color.blue))
+        vl.color = getColor(R.color.blue)
+
+        val vl2 = LineDataSet(valuesY, "Y")
+        vl2.setDrawValues(false)
+        vl2.lineWidth = 2f
+        vl2.setCircleColor(getColor(R.color.green))
+        vl2.color = getColor(R.color.green)
+
+        val vl3 = LineDataSet(valuesZ, "Z")
+        vl3.setDrawValues(false)
+        vl3.lineWidth = 2f
+        vl3.setCircleColor(getColor(R.color.red))
+        vl3.color = getColor(R.color.red)
+
+
+
+        lineChart.xAxis.labelRotationAngle = 0f
+        var dataSets = ArrayList<ILineDataSet>()
+        dataSets.add(vl)
+        dataSets.add(vl2)
+        dataSets.add(vl3)
+        lineChart.data = LineData(dataSets)
+        lineChart.axisRight.isEnabled = false
+        lineChart.xAxis.axisMinimum = 0F
+
+    }
 
 }
