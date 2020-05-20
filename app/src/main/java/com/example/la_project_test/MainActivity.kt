@@ -137,31 +137,34 @@ class MainActivity : AppCompatActivity(), SensorEventListener, View.OnClickListe
                 }
             }
             Sensor.TYPE_LINEAR_ACCELERATION -> {
-                if (counter == -1 && linearAccelerationWrapper.size() < 100) {
+                if (counter == -1 && linearAccelerationWrapper.size() < 2500) {
                     linearAccelerationWrapper.registerValue(Vector(event.values))
                 } else if (counter != -1)
                     linearAccelerationWrapper.registerValue(Vector(event.values))
                 if (linearAccelerationWrapper.size() == fixesBetweenChange && counter != -1) {
-                    updateMovement(
-                        linearAccelerationWrapper.getAvgValue(),
-                        linearAccelerationWrapper.timeElapsed()
-                    )
-
+                    val time = linearAccelerationWrapper.timeElapsed()
+                    val avg = linearAccelerationWrapper.getAvgValue()
                     linearAccelerationWrapper.clearValues()
+                    updateMovement(
+                        avg,
+                        time
+                    )
                 }
             }
             Sensor.TYPE_GYROSCOPE -> {
-                gyroscopeWrapper.registerValue(Vector(event.values))
+                if (counter != -1)
+                    gyroscopeWrapper.registerValue(Vector(event.values))
                 if (gyroscopeWrapper.size() == 10 && counter != -1) {
-                    print("Hello")
-                    updateRotation(gyroscopeWrapper.getAvgValue(), gyroscopeWrapper.timeElapsed())
+                    val time = gyroscopeWrapper.timeElapsed()
+                    val avg = gyroscopeWrapper.getAvgValue()
                     gyroscopeWrapper.clearValues()
+                    updateRotation(avg, time)
                 }
             }
 
 
         }
-        if (counter == -1 && linearAccelerationWrapper.size() == 100 && accelerometerWrapper.size() == fixesBetweenChange && magnetometerWrapper.size() == fixesBetweenChange) {
+        if (counter == -1 && linearAccelerationWrapper.size() == 2500 && accelerometerWrapper.size() == fixesBetweenChange && magnetometerWrapper.size() == fixesBetweenChange) {
             val accelerometerValue = accelerometerWrapper.getAvgValue()
             val magnetometerValue = magnetometerWrapper.getAvgValue()
 
@@ -171,7 +174,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener, View.OnClickListe
             linearAccelerationWrapper.clearValues()
             gyroscopeWrapper.clearValues()
             counter = 0
-            chartCounter = 0
             startTime = System.nanoTime().toFloat()
         }
 
@@ -246,19 +248,19 @@ class MainActivity : AppCompatActivity(), SensorEventListener, View.OnClickListe
 
 
 
-        val vl = LineDataSet(valuesX, "X")
+        val vl = LineDataSet(valuesX, "East")
         vl.setDrawValues(false)
         vl.lineWidth = 2f
         vl.setCircleColor(getColor(R.color.blue))
         vl.color = getColor(R.color.blue)
 
-        val vl2 = LineDataSet(valuesY, "Y")
+        val vl2 = LineDataSet(valuesY, "North")
         vl2.setDrawValues(false)
         vl2.lineWidth = 2f
         vl2.setCircleColor(getColor(R.color.green))
         vl2.color = getColor(R.color.green)
 
-        val vl3 = LineDataSet(valuesZ, "Z")
+        val vl3 = LineDataSet(valuesZ, "UP")
         vl3.setDrawValues(false)
         vl3.lineWidth = 2f
         vl3.setCircleColor(getColor(R.color.red))
